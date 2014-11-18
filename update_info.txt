@@ -1,0 +1,6 @@
+update:
+
+- the tracer split (ET_seed)
+- there is a (still clumsy) mutation (ET_mutuate)
+- sparse matrcies, heisa to the memory
+- several small bugs less
