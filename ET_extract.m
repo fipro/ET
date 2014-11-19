@@ -1,13 +1,11 @@
 
 for i=1:length(a)
    
-     nr(i,:)      = a(i).nr(:);  % create struc. for agents
-     nr_type(i,:) = a(i).typenr(:);
-    
-    
+   nr(i,:)      = a(i).nr(:);  % create struc. for agents
+   nr_type(i,:) = a(i).typenr(:);
+      
    bmas(i,:)    =a(i).s(:);
-   
-%   netloss(i,:) =a(i).Snl(:);    
+  
    metaloss(i,:)=a(i).Sml(:);
    predloss(i,:)=a(i).Spl(:);  
    egloss(i,:)  =a(i).Sel(:);
@@ -21,14 +19,13 @@ for i=1:length(a)
    gg(i,:)  =a(i).Sgg(:);
    ng(i,:)  =a(i).Sng(:);
    
-      agg(i,:)  =a(i).Sagg(:);
-         hgg(i,:)  =a(i).Shgg(:);
+   agg(i,:)  =a(i).Sagg(:);
+   hgg(i,:)  =a(i).Shgg(:);
    
    Tsi(i)=a(i).Tsi;
    Ttr(i,:)=a(i).Ttr(:);
 
-  TAS(:,i)=a(i).Tstr(:);
-
+   TAS(:,i)=a(i).Tstr(:);
 
    TCNP_S(i,:)=a(i).CNP(1,1:2);
    TCNP_PS(i,:)=a(i).CNP(2,1:2);
