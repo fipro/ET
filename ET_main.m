@@ -6,7 +6,7 @@ tic;
 %+++++++++++++++++++  (Evolutionary Trait Model)  +++++++++++++++++++++++++
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-% Version  19/11/2014
+% Version  17/11/2014
 
 global iparam a 
 
@@ -29,7 +29,7 @@ mc(1:nGrid) =   -   diff;
 
 % Boundary conditions:
 mb(1)   = 1 + diff; % surface Closed
-%mb(end) = 1 + diff; % bottom closed
+mb(end) = 1 + diff; % bottom closed
 
 % assemble matrix
 A(2:nGrid+1:nGrid*nGrid)       = ma(2:end);
@@ -42,50 +42,33 @@ for t= 2:nTime
 
     disp(['time: ',num2str(t),'   Agents alive: ' ,num2str(nAgents)]);            % print so see progress
 
-%% light field
+    %% light field
     % thing about how to estiamte chlorohpyll; to get extinction due to
     % phytoplankton, so for now just water turbidity
-    %I = iparam.I0 * exp( -cumsum(iparam.Kp*z));                         % Extinction by water
+    I = iparam.I0 * exp( -cumsum(iparam.Kp*z));                         % Extinction by water
 
     % still needs to define P
-    I = iparam.I0 * exp( -cumsum(iparam.Kw*P)*param.dz ...  % Self-shading
-         - iparam.Kp*z);                                    % Extinction by water
-   
-     
-%% autotroph growth
+    %I = iparam.I0 * exp( -cumsum(iparam.Kw*P)*param.dz ...  % Self-shading
+     %     - iparam.Kp*z);                    % Extinction by water% nutrient fields
 
-    % find limiting resource
-    fI = I./(iparam.kI+I);       % Light-dependent phytoplankton growth
-    fN = IN(t-1,:)./(iparam.kN+IN(t-1,:));       % Nutrient-dependenth growth
-    fP = IP(t-1,:)./(iparam.kP+IP(t-1,:));       % Nutrient-dependenth growth
-    fN(IN(t-1,:)<=0) = 0; % Fix potentially negative growth rates
-    fP(IP(t-1,:)<=0) = 0; % Fix potentially negative growth rates
-    mu = iparam.mu0*min([fI, fN, fP]); % Effective growth rate
-       
-%% nutrient fields - reaction
+    %% nutrient fields - reaction
+    
+    % change matrices - set to zero
+    dN  = zeros(1,nGrid);
+    dP  = zeros(1,nGrid);
+    dDN = zeros(1,nGrid);
+    dDP = zeros(1,nGrid);
 
-% nitrogen
-  dIN = -mu.*P(t-1,:) ...   % Losses from phytoplankton uptake
-    + iparam.rmin*D(t-1,:);      % Remineralization from the detritus
- 
-% phosphate
-  dIP = -mu.*P(t-1,:) ...   % Losses from phytoplankton uptake
-    + iparam.rmin*D(t-1,:);      % Remineralization from the detritus
- 
-% Phytoplankton:
-  dP = (mu - iparam.m).*P(t,:) %... % growth;
-   % - grazing
-   
-  % Detritus:
-  dD = iparam.m*P(t-1,:) ...      % Creation by dead phytoplankton
-    -iparam.rmin*D(t-1,:);        % Remineralization
-
-
+    % changes related to field 
+    dN  = dN  + iparam.rmin*DN(t-1,:);      % Remineralization from the detritus
+    dP  = dP  + iparam.rmin*DP(t-1,:);      % Remineralization from the detritus
+    dDN = dDN - iparam.rmin*DN(t-1,:);
+    dDP = dDP - iparam.rmin*DP(t-1,:);
 
     % changes related to agents    
     for nr = 1:nAgents
 
-       dIN(ceil(s_po(nr)*iparam.dz)) = dIN(ceil(s_po(nr)*iparam.dz))...
+       dN(ceil(s_po(nr)*iparam.dz)) = dN(ceil(s_po(nr)*iparam.dz))...
               -s_agg(nr)*t_Ntot(nr)*s_si(nr);
 
        dP(ceil(s_po(nr)*iparam.dz)) = dP(ceil(s_po(nr)*iparam.dz))...
@@ -99,24 +82,24 @@ for t= 2:nTime
     end 
    
     % solve
-    s(1,:)=(IN(t-1,:)+dIN*iparam.dt); 
+    s(1,:)=(IN(t-1,:)+dN*iparam.dt); 
     IN(t,:)=A\(s)';
 
-    s(1,:)=(IP(t-1,:)+dIP*iparam.dt); 
+    s(1,:)=(IP(t-1,:)+dP*iparam.dt); 
     IP(t,:)=A\(s)';
 
-    s(1,:)=(D(t-1,:)+dD*iparam.dt); 
-    D(t,:)=A\(s)';
+    s(1,:)=(DN(t-1,:)+dDN*iparam.dt); 
+    DN(t,:)=A\(s)';
 
-    s(1,:)=(P(t-1,:)+dP*iparam.dt); 
-    P(t,:)=A\(s)';
+    s(1,:)=(DP(t-1,:)+dDP*iparam.dt); 
+    DP(t,:)=A\(s)';
    
     % kill negatives
     IN(t,:) = max(0, IN(t,:)); 
     IP(t,:) = max(0, IP(t,:)); 
-    D(t,:) = max(0, D(t,:)); 
-    P(t,:) = max(0, P(t,:));     
-    
+    DN(t,:) = max(0, DN(t,:)); 
+    DP(t,:) = max(0, DP(t,:)); 
+
 %% update size
  
     s_si = max(0, s_si + s_ng) ;  
@@ -223,7 +206,7 @@ for t= 2:nTime
     s_nl  = s_nl(apos); 
     s_met = s_met(apos);
 
-    fI  = fI(apos);
+    s_fI  = s_fI(apos);
     s_fN  = s_fN(apos);
     s_fP  = s_fP(apos);
     s_agg = s_agg(apos);
@@ -245,6 +228,37 @@ for t= 2:nTime
         s_po(nr) = max ( s_po(nr), 1) ;            % set bottom boundary
         s_po(nr) = min ( iparam.Depth, s_po(nr)) ;   % set surface boundary
 
+%% autotroph growth
+
+%interpolate nutritent conc. for actual agent position
+INint(nr)=interp1(z,IN(t-1,1:end),(s_po(nr)*iparam.dz));
+IPint(nr)=interp1(z,IP(t-1,1:end),(s_po(nr)*iparam.dz));
+
+%interpolate light for actual agent position
+Iint(nr)=interp1(z,I(1:end),(s_po(nr)*iparam.dz));
+
+        if (t_tro(nr,1) ~= 2)
+
+            % find limiting resource
+        %    s_fI(nr) = I(ceil(s_po(nr)*iparam.dz))./(p_kI(nr)+I(ceil(s_po(nr)*iparam.dz)));       % Light-dependent phytoplankton growth
+        %    s_fN(nr) = IN(t-1,ceil(s_po(nr)*iparam.dz))./(p_kN(nr)+IN(t-1,ceil(s_po(nr)*iparam.dz)));     % Nutrient-dependenth growth
+         %   s_fP(nr) = IP(t-1,ceil(s_po(nr)*iparam.dz))./(p_kP(nr)+IP(t-1,ceil(s_po(nr)*iparam.dz)));     % Nutrient-dependenth growth
+
+            s_fI(nr) = Iint(nr)./(p_kI(nr)+Iint(nr));       % Light-dependent phytoplankton growth
+            s_fN(nr) = INint(nr)./(p_kN(nr)+INint(nr));     % Nutrient-dependenth growth
+            s_fP(nr) = IPint(nr)./(p_kP(nr)+IPint(nr));     % Nutrient-dependenth growth
+
+            
+            s_fN(IN(t-1,ceil(s_po(nr)*iparam.dz))<=0) = 0; % Fix potentially negative growth rates
+            s_fP(IP(t-1,ceil(s_po(nr)*iparam.dz))<=0) = 0; % Fix potentially negative growth rates
+
+            % get uptake
+            s_agg(nr) = p_umax(nr)*min([s_fI(nr),s_fN(nr),s_fP(nr)])*t_tro(nr,2)*s_si(nr); % Effective growth rate
+        else
+            % no autotrophic uptake
+            s_agg(nr)= 0; 
+        end
+                   
 %% encounter (only for heterotroph part) ?
 
         for nr2 = 1:nAgents
