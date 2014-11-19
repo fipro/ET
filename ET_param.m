@@ -2,8 +2,6 @@
 
 %% domain
 
-% test
-
 iparam.tEnd = 1000;   % total time 
 iparam.dt   = 1;     % time discretisation  
 
