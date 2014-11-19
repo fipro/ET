@@ -12,16 +12,16 @@ iparam.nAgents= 1000 ;  % number of agents
 
 %% physics
 
-% iparam.I0 = 100 ; % surface light [watt m^-2]
 iparam.I0=10^5*12; % mikromols/m^2/s
 iparam.Kp=0.2; % backround turbidity (per meters)
-iparam.Kw=0.015; % attenuation coefficient of Phytoplankton (K)  (square meters per mmol of nitrogen)
-iparam.d = 100  ; % diffusion for now
+iparam.Kw=0.015; % attenuation coefficient of Phytoplankton (K) (square meters per mmol of nitrogen)
+iparam.d = 100 ; % diffusion for now
 
 % inital resources (starting with Redfield)
-iparam.iniP0=0.016; % mmol N/m^3 
-iparam.iniN0=0.106; % mmol N/m^3   0.1
-iparam.iniDOM=0; % mmol DOM/m^3
+iparam.iniIP=0.016; % mmol N/m^3
+iparam.iniIN=0.106; % mmol N/m^3 0.1
+iparam.iniD=0; % mmol Det/m^3
+iparam.iniP=1.0; % mmol phyto/m^3
 
 %% nutrients
 

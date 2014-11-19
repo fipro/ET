@@ -17,25 +17,30 @@ diff = iparam.d;
 z = 0.5*iparam.dz:iparam.dz:iparam.Depth+0.5*iparam.dz;
 nGrid = length(z); % number of cells
 
-IP = zeros(nTime,nGrid); % arrray inorganic phosphate        
-IN = zeros(nTime,nGrid); % arrray inorganic nitrogen   
-%DOMC = zeros(nTime,nGrid); % arrray organic C   
-DN = zeros(nTime,nGrid); % arrray organic C   
-DP = zeros(nTime,nGrid); % arrray organic C   
+IP = zeros(nTime,nGrid); % arrray inorganic phosphate
+IN = zeros(nTime,nGrid); % arrray inorganic nitrogen
+D = zeros(nTime,nGrid); % arrray organic C
+P = zeros(nTime,nGrid); % arrray organic C
 
 % matrix
-A = zeros(nGrid); 
+A = zeros(nGrid);
+
+% change matrices - set to zero
+dP = zeros(1,nGrid);
+dIN = zeros(1,nGrid);
+dP = zeros(1,nGrid);
+dDN = zeros(1,nGrid);
+dDP = zeros(1,nGrid);
 
 % intial concentrations
-IN(1,:) = iparam.iniN0; 
-IP(1,:) = iparam.iniP0; 
-DN(1,:) = iparam.iniDOM;
-DP(1,:) = iparam.iniDOM;
- 
+IN(1,:) = iparam.iniIN + 0*z;
+IP(1,:) = iparam.iniIP + 0*z;
+D(1,:) = iparam.iniD + 0*z;
+P(1,:) = iparam.iniP + 0*z;
+
 % artifical AS,PS,MS structure of DOM
 % here it only serves a 'recognizer' for the TAG of remineralizer
-% t_str_DOM = [0.0 1 0.0]; 
-
+% t_str_DOM = [0.0 1 0.0];
 
 %% Agents
 
