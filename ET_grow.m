@@ -29,12 +29,10 @@ s_po(Ca(1,:)) =  s_po(Ca(2,:));
 % some part of you (max all).
 
 % winner gets - uptake
-Agetm(1: nrag) = min( s_si(Ca(2,:)) , ...
-    p_up(Ca(1,:)).* s_si(Ca(1,:)).*t_tro(nr,2));  
+Agetm(1: nrag) = min( s_si(Ca(2,:)) , p_up(Ca(1,:)).* s_si(Ca(1,:)));  
 
 % loser gives - loss
-Agiv(1: nrag) = min( s_si(Ca(2,:)) , ...
-    p_up(Ca(1,:)).* s_si(Ca(1,:)).*t_tro(nr,2));  
+Agiv(1: nrag) = min( s_si(Ca(2,:)) , p_up(Ca(1,:)).* s_si(Ca(1,:)));  
 
 %% assimilation 
 
