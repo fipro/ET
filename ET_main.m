@@ -56,11 +56,11 @@ mu = iparam.mu0*min([fI, fN, fP]); % Effective growth rate
 %% nutrient fields - reaction
 % nitrogen
 dIN = -mu.*P(t-1,:) ... % Losses from phytoplankton uptake
-+ iparam.rmin*D(t-1,:); % Remineralization from the detritus
+      +iparam.rmin*D(t-1,:); % Remineralization from the detritus
 
 % phosphate
 dIP = -mu.*P(t-1,:) ... % Losses from phytoplankton uptake
-+ iparam.rmin*D(t-1,:); % Remineralization from the detritus
+      +iparam.rmin*D(t-1,:); % Remineralization from the detritus
 
 % Phytoplankton:
 dP = (mu - iparam.m).*P(t,:) %... % growth;
@@ -68,19 +68,19 @@ dP = (mu - iparam.m).*P(t,:) %... % growth;
 
 % Detritus:
 dD = iparam.m*P(t-1,:) ... % Creation by dead phytoplankton
--iparam.rmin*D(t-1,:); % Remineralization
+     -iparam.rmin*D(t-1,:) ;%+ losses from grazers ; % Remineralization
 
 % changes related to agents
-for nr = 1:nAgents
-    dIN(ceil(s_po(nr)*iparam.dz)) = dIN(ceil(s_po(nr)*iparam.dz))...
-                                    -s_agg(nr)*t_Ntot(nr)*s_si(nr);
-    dP(ceil(s_po(nr)*iparam.dz)) = dP(ceil(s_po(nr)*iparam.dz))...
-                                    -s_agg(nr)*t_Ptot(nr)*s_si(nr);
-    dDP(ceil(s_po(nr)*iparam.dz)) = dDP(ceil(s_po(nr)*iparam.dz))...
-                                    +s_eg(nr)*t_Ptot(nr)*s_si(nr);
-    dDN(ceil(s_po(nr)*iparam.dz)) = dDN(ceil(s_po(nr)*iparam.dz))...
-                                    +s_eg(nr)*t_Ntot(nr);
-end
+% for nr = 1:nAgents
+%     dIN(ceil(s_po(nr)*iparam.dz)) = dIN(ceil(s_po(nr)*iparam.dz))...
+%                                     -s_agg(nr)*t_Ntot(nr)*s_si(nr);
+%     dP(ceil(s_po(nr)*iparam.dz)) = dP(ceil(s_po(nr)*iparam.dz))...
+%                                     -s_agg(nr)*t_Ptot(nr)*s_si(nr);
+%     dDP(ceil(s_po(nr)*iparam.dz)) = dDP(ceil(s_po(nr)*iparam.dz))...
+%                                     +s_eg(nr)*t_Ptot(nr)*s_si(nr);
+%     dDN(ceil(s_po(nr)*iparam.dz)) = dDN(ceil(s_po(nr)*iparam.dz))...
+%                                     +s_eg(nr)*t_Ntot(nr);
+% end
 
 % solve
 s(1,:)=(IN(t-1,:)+dIN*iparam.dt);
