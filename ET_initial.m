@@ -9,26 +9,33 @@ global iparam a
 nTime = floor(iparam.tEnd/iparam.dt)+1;    % nr of iteration
 
 % disretisation
-
 diff = iparam.dt/(iparam.dz^2)*iparam.d;  
+diff = iparam.d;
 
 %% eulerian fields
 
 z = 0.5*iparam.dz:iparam.dz:iparam.Depth+0.5*iparam.dz;
 nGrid = length(z); % number of cells
 
-IP = sparse(nTime,nGrid); % arrray inorganic phosphate        
-IN = sparse(nTime,nGrid); % arrray inorganic nitrogen   
-DOM = sparse(nTime,nGrid); % arrray organic phosphate    
+IP = zeros(nTime,nGrid); % arrray inorganic phosphate        
+IN = zeros(nTime,nGrid); % arrray inorganic nitrogen   
+%DOMC = zeros(nTime,nGrid); % arrray organic C   
+DN = zeros(nTime,nGrid); % arrray organic C   
+DP = zeros(nTime,nGrid); % arrray organic C   
 
 % matrix
-A = sparse(nGrid,nGrid); 
-
+A = zeros(nGrid); 
 
 % intial concentrations
-IN(1,:) = iparam.IN0; 
-IP(1,:) = iparam.IP0; 
-DOM(1,:) = iparam.DOM; 
+IN(1,:) = iparam.iniN0; 
+IP(1,:) = iparam.iniP0; 
+DN(1,:) = iparam.iniDOM;
+DP(1,:) = iparam.iniDOM;
+ 
+% artifical AS,PS,MS structure of DOM
+% here it only serves a 'recognizer' for the TAG of remineralizer
+% t_str_DOM = [0.0 1 0.0]; 
+
 
 %% Agents
 
@@ -57,9 +64,25 @@ a(nr).typenr = nr;
 % auto- hetero- or mixoTroph
 % 1st value - prefered source (0 = auto ;  1 = hetero) binary
 % 2nd value - degree of mixotrophy (0 = only your prefered; 1 = auto&hetero are always equally important)
-a(nr).Ttr = [randint, rand(1)];
+
+% 1st value - torphic type (1 = auto ; 2 = hetero; 3 = mixotroph) 
+troph(nr) = ceil(rand(1)*3);
+
+% 2nd value - degree of mixotrophy (1 = only autotroph; 0 = only heterotroph)
+if (troph(nr) == 3)
+    t_pref(nr) = rand(1);
+elseif (troph(nr) == 1)
+    t_pref(nr) = 1;
+else
+    t_pref(nr) = 0;
+end
+
+a(nr).Ttr = [troph(nr), t_pref(nr)];
+
 % left it in because we might want ot return to his later, but for now:
-a(nr).Ttr = [1 0];
+%a(nr).Ttr = [1 0];
+
+t_tro(nr,:) = a(nr).Ttr;
 
 % Mobitity (random around base value)
 a(nr).Tmo    = rand(1);   %(*(1-range) + (rand(1) * Tm*(2*range)));  % base mobility
@@ -83,14 +106,21 @@ t_str(nr,3)  = a(nr).Tstr(3) ;   % metabolic strcture
 % phosphate 1-3 % of total
 % nitrate 10-30 % of total
 % C is the base unit, hence 1 in all cases
-a(nr).CNP(1,1:2) = [rand(1)*0.3, rand(1)*0.001] ;
-a(nr).CNP(2,1:2) = [rand(1)*0.3, rand(1)*0.001] ;
+a(nr).CNP(1,1:2) = [rand(1)*0.3, rand(1)*0.001] ;  % So: N2C & P2C in active in row 1, in passive in row 2, in storage in row 3
+a(nr).CNP(2,1:2) = [rand(1)*0.3, rand(1)*0.001] ;   
 a(nr).CNP(3,1:2) = [rand(1)*0.3, rand(1)*0.1] ;
+
+% total proprotion of N, P
+a(nr).Ptot = a(nr).CNP(1,2) + a(nr).CNP(2,2) + a(nr).CNP(3,2);
+a(nr).Ntot = a(nr).CNP(1,1) + a(nr).CNP(2,1) + a(nr).CNP(3,1);
 
 % for use in loop
 t_CNPAS(nr,1:2)  = a(nr).CNP(1,:) ;   % active structure  
 t_CNPPS(nr,1:2)  = a(nr).CNP(2,:) ;   % passive structure  
 t_CNPMS(nr,1:2)  = a(nr).CNP(3,:) ;   % metabolic strcture
+
+t_Ptot(nr) = a(nr).Ptot;  % total proportion of P
+t_Ntot(nr) = a(nr).Ntot;  % total proportion of N
 
 % storage (max values for C:N:P)
 % allowing up to 100% of total element to be stored
@@ -180,6 +210,20 @@ p_ae(nr) = 1/(1+a(nr).TagS(2)+a(nr).TagAS(2)+a(nr).TagPS(2)+a(nr).TagMS(2));
 % base speed
 p_sp(nr)  =  a(nr).Tmo*(t_str(nr,1)/t_si(nr)); 
 
+% autotrophic rates
+if (t_tro(nr,1)~=2)
+    p_kI(nr) =  t_str(nr,3)*10^5; % light half saturation 
+    p_kN(nr) =  t_str(nr,3);      % nitrogen half saturation 
+    p_kP(nr) =  t_str(nr,3)*(1/16);      % phosphate half saturation 
+    
+    p_umax(nr) = 10*t_str(nr,1);  % max growth rate
+else
+    p_kI(nr)   = 0;
+    p_kN(nr)   = 0;
+    p_kP(nr)   = 0;
+    p_umax(nr) = 0;
+end
+    
 %% ---------------------------------------------------------------
 %% ------------STATES---------------------------------------------
 %% ---------------------------------------------------------------
@@ -189,9 +233,9 @@ p_sp(nr)  =  a(nr).Tmo*(t_str(nr,1)/t_si(nr));
 s_si(nr) = a(nr).Tsi*iparam.ins ;  
 
 % inital composition (optimal)
-s_str(nr,1)  = s_si(nr)*a(nr).Tstr(1) ;    % active structure  
-s_str(nr,2)  = s_si(nr)*a(nr).Tstr(2) ;    %  passive structure  
-s_str(nr,3)  = s_si(nr)*a(nr).Tstr(3) ;    % resource strcture
+%s_str(nr,1)  = s_si(nr)*a(nr).Tstr(1) ;    % active structure  
+%s_str(nr,2)  = s_si(nr)*a(nr).Tstr(2) ;    %  passive structure  
+%s_str(nr,3)  = s_si(nr)*a(nr).Tstr(3) ;    % resource strcture
 
 % speed   
 s_sp(nr)  =  p_sp(nr)*s_si(nr);  
@@ -200,50 +244,55 @@ s_sp(nr)  =  p_sp(nr)*s_si(nr);
 s_po(nr,:)=[rand(1)*iparam.Depth];
 
 s_us(nr)     = 0;  % uptake saturation
-s_nl(nr)       = 0;  
-s_ng(nr)       = 0;  
-s_met(nr)       = 0;  
-s_pl(nr)       = 0;  
-s_eg(nr)       = 0;  
-s_gg(nr) = 0;
-s_me(nr,3)       = 0;  
+s_nl(nr)     = 0;  
+s_ng(nr)     = 0;  
+s_met(nr)    = 0;  
+s_pl(nr)     = 0;  
+s_eg(nr)     = 0;  
+s_gg(nr)     = 0;
+s_me(nr,3)   = 0;  
 Agetm(nr,nr) = 0;
-s_aen(nr)  =0;
+s_aen(nr)    = 0;
+s_fI(nr)     = 0;
+s_fN(nr)     = 0;
+s_fP(nr)     = 0;
+s_agg(nr)    = 0;
+s_hgg(nr)    = 0;
      
       
-%% set for loop
+%% set for loop to stores
 
 nAgents = iparam.nAgents;
 
 %s_sgg=zeros(nAgents,3);
 %s_sng=zeros(nAgents,3);
 
-s_gg=sparse(1,nAgents);
-s_ng=sparse(1,nAgents);
+s_gg=zeros(1,nAgents);
+s_ng=zeros(1,nAgents);
 
 %Agetmm=zeros(1,nAgents);
 
-Aus=sparse(nAgents,nAgents);
+Aus=zeros(nAgents);
 
-       a(nr).time(1)      = s_gg(nr);  % gross growth
-        
-        a(nr).s(1)       = s_si(nr);  % size
-        a(nr).Str(1,1)   = s_str(nr,1);    
-        a(nr).Str(1,2)   = s_str(nr,2);     
-        a(nr).Str(1,3)   = s_str(nr,3);    
+a(nr).time(1)      = s_gg(nr);  % gross growth
 
-        a(nr).Sgg(1)      = s_gg(nr);  % gross growth
-        a(nr).Sng(1)      = s_ng(nr);  % netgrowth
-        
-        a(nr).Snl(1)      = s_nl(nr);  % net loss
-        a(nr).Sml(1)      = s_met(nr);   % metabolism losses
-        a(nr).Spl(1)      = s_pl(nr) ;  % predation losses
-        a(nr).Sel(1)      = s_eg(nr) ;  % egestion losses
-        a(nr).Sal(1)      = s_aen(nr) ;% assimilation + nut mismatch losses
-        
-        a(nr).Sp(1,:)     = s_po(nr,:); % agent position
-        a(nr).Ssp(1)      = s_sp(nr) ;  % actual speed
-        a(nr).Sus(1)      = s_us(nr);   % uptake saturation (stomach)
+a(nr).s(1)       = s_si(nr);  % size
+%a(nr).Str(1,1)   = s_str(nr,1);    
+%a(nr).Str(1,2)   = s_str(nr,2);     
+%a(nr).Str(1,3)   = s_str(nr,3);    
+
+a(nr).Sgg(1)      = s_gg(nr);  % gross growth
+a(nr).Sng(1)      = s_ng(nr);  % netgrowth
+
+a(nr).Snl(1)      = s_nl(nr);  % net loss
+a(nr).Sml(1)      = s_met(nr);   % metabolism losses
+a(nr).Spl(1)      = s_pl(nr) ;  % predation losses
+a(nr).Sel(1)      = s_eg(nr) ;  % egestion losses
+a(nr).Sal(1)      = s_aen(nr) ;% assimilation + nut mismatch losses
+
+a(nr).Sp(1,:)     = s_po(nr,:); % agent position
+a(nr).Ssp(1)      = s_sp(nr) ;  % actual speed
+a(nr).Sus(1)      = s_us(nr);   % uptake saturation (stomach)
 
 a_dead=a(1);
 a_deadnew=a(1);

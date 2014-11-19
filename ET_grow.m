@@ -29,10 +29,12 @@ s_po(Ca(1,:)) =  s_po(Ca(2,:));
 % some part of you (max all).
 
 % winner gets - uptake
-Agetm(1: nrag) = min( s_si(Ca(2,:)) , p_up(Ca(1,:)).* s_si(Ca(1,:)) );  
+Agetm(1: nrag) = min( s_si(Ca(2,:)) , ...
+    p_up(Ca(1,:)).* s_si(Ca(1,:)).*t_tro(nr,2));  
 
 % loser gives - loss
-Agiv(1: nrag) = min( s_si(Ca(2,:)) , p_up(Ca(1,:)).* s_si(Ca(1,:)) );  
+Agiv(1: nrag) = min( s_si(Ca(2,:)) , ...
+    p_up(Ca(1,:)).* s_si(Ca(1,:)).*t_tro(nr,2));  
 
 %% assimilation 
 
@@ -53,8 +55,8 @@ s_lim=min(dN,dP);
 s_lim=min(0,s_lim);
 
 % gross growth
-s_gg          = zeros(1,nAgents);
-s_gg(Ca(1,:)) = Agetm.*(1+s_lim)'.* p_ae(Ca(1,:));
+s_hgg          = zeros(1,nAgents);
+s_hgg(Ca(1,:)) = Agetm.*(1+s_lim)'.* p_ae(Ca(1,:));
 
 % predation losses
 s_pl          = zeros(1,nAgents);
@@ -62,6 +64,4 @@ s_pl(Ca(2,:)) = Agiv;
 
 % losses due to assimilation effiency and nutrient mismatch
 s_aen          = zeros(1,nAgents);
-s_aen(Ca(1,:)) = Agetm-s_gg(Ca(1,:));
-
-
+s_aen(Ca(1,:)) = Agetm-s_hgg(Ca(1,:));
