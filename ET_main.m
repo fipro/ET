@@ -31,7 +31,7 @@ mc(1:nGrid) =   -   diff;
 
 % Boundary conditions:
 mb(1)   = 1 + diff; % surface Closed
-mb(end) = 1 + diff; % bottom closed
+%mb(end) = 1 + diff; % bottom closed
 
 % assemble matrix
 A(2:nGrid+1:nGrid*nGrid)       = ma(2:end);
@@ -43,15 +43,6 @@ A(nGrid+1:nGrid+1:nGrid*nGrid) = mc(1:end-1);
 for t= 2:nTime
 
     disp(['time: ',num2str(t),'   Agents alive: ' ,num2str(nAgents)]);            % print so see progress
-
-    %% light field
-    % thing about how to estiamte chlorohpyll; to get extinction due to
-    % phytoplankton, so for now just water turbidity
-    I = iparam.I0 * exp( -cumsum(iparam.Kp*z));                         % Extinction by water
-
-    % still needs to define P
-    %I = iparam.I0 * exp( -cumsum(iparam.Kw*P)*param.dz ...  % Self-shading
-     %     - iparam.Kp*z);                    % Extinction by water% nutrient fields
 
     %% nutrient fields - reaction
     
@@ -102,6 +93,24 @@ for t= 2:nTime
     DN(t,:) = max(0, DN(t,:)); 
     DP(t,:) = max(0, DP(t,:)); 
 
+    %% light field
+    
+    % self-shading
+    % this account in units of nitrogen, since all agents produce a shadow
+    for nr= 1:nAgents
+        Pn(t,ceil(s_po(nr)*iparam.dz)) = Pn(t,ceil(s_po(nr)*iparam.dz))...
+                                       + (s_si(nr)*t_Ntot(nr));  
+   end
+      
+    % thing about how to estiamte chlorohpyll; to get extinction due to
+    % phytoplankton, so for now just water turbidity
+    I = iparam.I0 * exp( -cumsum(iparam.Kp*z));                         % Extinction by water
+
+    % still needs to define P
+    I = iparam.I0 * exp( -cumsum(iparam.Kw*Pn(t-1,:)./12)*iparam.dz ...  % Self-shading
+          - iparam.Kp*z);                    % Extinction by water% nutrient fields
+
+    
 %% update size
  
     s_si = max(0, s_si + s_ng) ;  
@@ -205,7 +214,7 @@ for t= 2:nTime
     s_gg  = s_gg(apos);
     s_hgg = s_hgg(apos);
     s_pl  = s_pl(apos);
-    s_nl  = s_nl(apos); 
+   %s_nl  = s_nl(apos); 
     s_met = s_met(apos);
 
     s_fI  = s_fI(apos);
@@ -351,7 +360,7 @@ Iint(nr)=interp1(z,I(1:end),(s_po(nr)*iparam.dz));
     s_eg = s_met + s_aen;
 
     % overall losses
-    s_nl = s_pl + s_met + s_aen;
+   % s_nl = s_pl + s_met + s_aen;
 
     % net growth
     % not s_aen because it represents the losses that are not even assililated
@@ -365,20 +374,23 @@ Iint(nr)=interp1(z,I(1:end),(s_po(nr)*iparam.dz));
 
         a(nr).s(t)   = s_si(nr);  % size
 
+        a(nr).Shgg(t) = s_hgg(nr);   % gross growth
+        a(nr).Sagg(t) = s_agg(nr);   % gross growth
+        
         a(nr).Sgg(t) = s_gg(nr);   % gross growth
         a(nr).Sng(t) = s_ng(nr);   % netgrowth
 
-        a(nr).Snl(t) = s_nl(nr);   % net loss
+   %     a(nr).Snl(t) = s_nl(nr);   % net loss
         a(nr).Sml(t) = s_met(nr); % metabolism losses
         a(nr).Spl(t) = s_pl(nr) ;  % predation losses
-        a(nr).Sel(t) = s_eg(nr) ;  % egestion losses
+        a(nr).Sel(t) = s_eg(nr) ;  % egestion 
         a(nr).Sal(t) = s_aen(nr) ;  % assimilation + nut mismatch losses
 
         a(nr).Sp(t)  = s_po(nr); % agent position
         a(nr).Ssp(t) = s_sp(nr) ;  % actual speed
         a(nr).Sus(t) = s_us(nr);   % uptake saturation (stomach)
-
-    end
+        
+   end
     
 %% mutate
   

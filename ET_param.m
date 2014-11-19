@@ -5,7 +5,7 @@
 iparam.tEnd = 1000;   % total time 
 iparam.dt   = 1;     % time discretisation  
 
-iparam.Depth  = 200 ; % depth (gridpoints) size of spatial dimension
+iparam.Depth  = 50 ; % depth (gridpoints) size of spatial dimension
 iparam.dz   = 1 ; % spatial resolution in meters for grid
 
 iparam.nAgents= 1000 ;  % number of agents
@@ -16,7 +16,7 @@ iparam.nAgents= 1000 ;  % number of agents
 iparam.I0=10^5*12; % mikromols/m^2/s
 iparam.Kp=0.2; % backround turbidity (per meters)
 iparam.Kw=0.015; % attenuation coefficient of Phytoplankton (K)  (square meters per mmol of nitrogen)
-iparam.d = 100  ; % diffusion for now
+iparam.d = 10  ; % diffusion for now
 
 % inital resources (starting with Redfield)
 iparam.iniP0=0.016; % mmol N/m^3 
@@ -58,9 +58,9 @@ iparam.scon  = 0.7 ; %conversion efficency for structures  /  assimilation effic
 iparam.ins   = 0.5  ; % intial size as in trait size
 
 % scaled (on size, speed, flex or anything else that seems to make sense)
-iparam.sm    = 0.02;     % base standard metabolism   
-iparam.am    = 0.1 ;      % base active metabolism 
-iparam.mm    = 0.05;     % base movment cost  
+iparam.sm    = 0.01;     % base standard metabolism   
+iparam.am    = 0.01 ;    % base active metabolism 
+iparam.mm    = 0.005;    % base movment cost  
 
 %iparam.sm    = 0.01  ;     % base standard metabolism   
 %iparam.am    = 0.05 ;      % base active metabolism 
@@ -72,4 +72,4 @@ iparam.mut = 0.01 ;     % mutation properbility
 iparam.r = 0.33 ; % standard deviation
 
 % die at proportion of size of maturity
-iparam.death = 0.25;
+iparam.death = 0.1;

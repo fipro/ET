@@ -23,6 +23,10 @@ IN = zeros(nTime,nGrid); % arrray inorganic nitrogen
 DN = zeros(nTime,nGrid); % arrray organic C   
 DP = zeros(nTime,nGrid); % arrray organic C   
 
+% field for concentration of phytoplankton in units of nitrogen
+% used in self-shading
+Pn=IP;
+
 % matrix
 A = zeros(nGrid); 
 
@@ -35,6 +39,8 @@ DP(1,:) = iparam.iniDOM;
 % artifical AS,PS,MS structure of DOM
 % here it only serves a 'recognizer' for the TAG of remineralizer
 % t_str_DOM = [0.0 1 0.0]; 
+
+
 
 
 %% Agents
@@ -111,8 +117,8 @@ a(nr).CNP(2,1:2) = [rand(1)*0.3, rand(1)*0.001] ;
 a(nr).CNP(3,1:2) = [rand(1)*0.3, rand(1)*0.1] ;
 
 % total proprotion of N, P
-a(nr).Ptot = a(nr).CNP(1,2) + a(nr).CNP(2,2) + a(nr).CNP(3,2);
-a(nr).Ntot = a(nr).CNP(1,1) + a(nr).CNP(2,1) + a(nr).CNP(3,1);
+a(nr).Ptot = (a(nr).CNP(1,2) + a(nr).CNP(2,2) + a(nr).CNP(3,2))*0.3;
+a(nr).Ntot = (a(nr).CNP(1,1) + a(nr).CNP(2,1) + a(nr).CNP(3,1))*0.3;
 
 % for use in loop
 t_CNPAS(nr,1:2)  = a(nr).CNP(1,:) ;   % active structure  
@@ -216,7 +222,7 @@ if (t_tro(nr,1)~=2)
     p_kN(nr) =  t_str(nr,3);      % nitrogen half saturation 
     p_kP(nr) =  t_str(nr,3)*(1/16);      % phosphate half saturation 
     
-    p_umax(nr) = 10*t_str(nr,1);  % max growth rate
+    p_umax(nr) = t_str(nr,1);  % max growth rate
 else
     p_kI(nr)   = 0;
     p_kN(nr)   = 0;
@@ -280,6 +286,9 @@ a(nr).s(1)       = s_si(nr);  % size
 %a(nr).Str(1,1)   = s_str(nr,1);    
 %a(nr).Str(1,2)   = s_str(nr,2);     
 %a(nr).Str(1,3)   = s_str(nr,3);    
+
+a(nr).Sagg(1)      = s_agg(nr);  % gross growth
+a(nr).Shgg(1)      = s_hgg(nr);  % netgrowth
 
 a(nr).Sgg(1)      = s_gg(nr);  % gross growth
 a(nr).Sng(1)      = s_ng(nr);  % netgrowth

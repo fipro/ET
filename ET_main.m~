@@ -1,6 +1,8 @@
 clear all; close all; clc;
 tic;
 
+% test
+
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %++++++++++++++++++++++++++  E.T. Model  ++++++++++++++++++++++++++++++++++
 %+++++++++++++++++++  (Evolutionary Trait Model)  +++++++++++++++++++++++++
@@ -29,7 +31,7 @@ mc(1:nGrid) =   -   diff;
 
 % Boundary conditions:
 mb(1)   = 1 + diff; % surface Closed
-mb(end) = 1 + diff; % bottom closed
+%mb(end) = 1 + diff; % bottom closed
 
 % assemble matrix
 A(2:nGrid+1:nGrid*nGrid)       = ma(2:end);
@@ -41,15 +43,6 @@ A(nGrid+1:nGrid+1:nGrid*nGrid) = mc(1:end-1);
 for t= 2:nTime
 
     disp(['time: ',num2str(t),'   Agents alive: ' ,num2str(nAgents)]);            % print so see progress
-
-    %% light field
-    % thing about how to estiamte chlorohpyll; to get extinction due to
-    % phytoplankton, so for now just water turbidity
-    I = iparam.I0 * exp( -cumsum(iparam.Kp*z));                         % Extinction by water
-
-    % still needs to define P
-    %I = iparam.I0 * exp( -cumsum(iparam.Kw*P)*param.dz ...  % Self-shading
-     %     - iparam.Kp*z);                    % Extinction by water% nutrient fields
 
     %% nutrient fields - reaction
     
@@ -100,6 +93,26 @@ for t= 2:nTime
     DN(t,:) = max(0, DN(t,:)); 
     DP(t,:) = max(0, DP(t,:)); 
 
+    %% light field
+    
+    % get chlorophyll concentration to estiamte self-shaing
+    [Pa Pxx] = find(t_tro(:,1) ~= 2);
+    
+    for nr=Pa
+       
+        Pn(t,round(s_po(nr)*iparam.dz)) = Pn(t,round(s_po(nr)*iparam.dz))...
+                                      + (s_si(nr)*t_tro(nr,2))./50; % get position on grid    
+    end
+      
+    % thing about how to estiamte chlorohpyll; to get extinction due to
+    % phytoplankton, so for now just water turbidity
+    I = iparam.I0 * exp( -cumsum(iparam.Kp*z));                         % Extinction by water
+
+    % still needs to define P
+    %I = iparam.I0 * exp( -cumsum(iparam.Kw*P)*param.dz ...  % Self-shading
+     %     - iparam.Kp*z);                    % Extinction by water% nutrient fields
+
+    
 %% update size
  
     s_si = max(0, s_si + s_ng) ;  
@@ -203,7 +216,7 @@ for t= 2:nTime
     s_gg  = s_gg(apos);
     s_hgg = s_hgg(apos);
     s_pl  = s_pl(apos);
-    s_nl  = s_nl(apos); 
+   %s_nl  = s_nl(apos); 
     s_met = s_met(apos);
 
     s_fI  = s_fI(apos);
@@ -230,28 +243,23 @@ for t= 2:nTime
 
 %% autotroph growth
 
-%interpolate phytoplankton conc. for actual agent position
-%P_a(nr,t)=interp1(param.z,P(t-1,1:end),(a(nr).pos(t-1)*param.dz));
-
-%interpolate light for actual agent position
-%I_a(nr,t)=interp1(param.z,I(1:end),(a(nr).pos(t-1)*param.dz));
-
 %interpolate nutritent conc. for actual agent position
 INint(nr)=interp1(z,IN(t-1,1:end),(s_po(nr)*iparam.dz));
 IPint(nr)=interp1(z,IP(t-1,1:end),(s_po(nr)*iparam.dz));
-%I_a(nr,t)=interp1(param.z,I(1:end),(a(nr).pos(t-1)*param.dz));
-Iint(nr)=interp1(z,I(t-1,1:end),(s_po(nr)*iparam.dz));
+
+%interpolate light for actual agent position
+Iint(nr)=interp1(z,I(1:end),(s_po(nr)*iparam.dz));
 
         if (t_tro(nr,1) ~= 2)
 
             % find limiting resource
-            s_fI(nr) = I(ceil(s_po(nr)*iparam.dz))./(p_kI(nr)+I(ceil(s_po(nr)*iparam.dz)));       % Light-dependent phytoplankton growth
-            s_fN(nr) = IN(t-1,ceil(s_po(nr)*iparam.dz))./(p_kN(nr)+IN(t-1,ceil(s_po(nr)*iparam.dz)));     % Nutrient-dependenth growth
-            s_fP(nr) = IP(t-1,ceil(s_po(nr)*iparam.dz))./(p_kP(nr)+IP(t-1,ceil(s_po(nr)*iparam.dz)));     % Nutrient-dependenth growth
+        %    s_fI(nr) = I(ceil(s_po(nr)*iparam.dz))./(p_kI(nr)+I(ceil(s_po(nr)*iparam.dz)));       % Light-dependent phytoplankton growth
+        %    s_fN(nr) = IN(t-1,ceil(s_po(nr)*iparam.dz))./(p_kN(nr)+IN(t-1,ceil(s_po(nr)*iparam.dz)));     % Nutrient-dependenth growth
+         %   s_fP(nr) = IP(t-1,ceil(s_po(nr)*iparam.dz))./(p_kP(nr)+IP(t-1,ceil(s_po(nr)*iparam.dz)));     % Nutrient-dependenth growth
 
             s_fI(nr) = Iint(nr)./(p_kI(nr)+Iint(nr));       % Light-dependent phytoplankton growth
-            s_fN(nr) = INint(nr)./(p_kN(nr)+INint());     % Nutrient-dependenth growth
-            s_fP(nr) = IPint(nr)./(p_kP(nr)+IPint(t-1,ceil(s_po(nr)*iparam.dz)));     % Nutrient-dependenth growth
+            s_fN(nr) = INint(nr)./(p_kN(nr)+INint(nr));     % Nutrient-dependenth growth
+            s_fP(nr) = IPint(nr)./(p_kP(nr)+IPint(nr));     % Nutrient-dependenth growth
 
             
             s_fN(IN(t-1,ceil(s_po(nr)*iparam.dz))<=0) = 0; % Fix potentially negative growth rates
@@ -354,7 +362,7 @@ Iint(nr)=interp1(z,I(t-1,1:end),(s_po(nr)*iparam.dz));
     s_eg = s_met + s_aen;
 
     % overall losses
-    s_nl = s_pl + s_met + s_aen;
+   % s_nl = s_pl + s_met + s_aen;
 
     % net growth
     % not s_aen because it represents the losses that are not even assililated
@@ -368,13 +376,16 @@ Iint(nr)=interp1(z,I(t-1,1:end),(s_po(nr)*iparam.dz));
 
         a(nr).s(t)   = s_si(nr);  % size
 
+        a(nr).Shgg(t) = s_hgg(nr);   % gross growth
+        a(nr).Sagg(t) = s_agg(nr);   % gross growth
+        
         a(nr).Sgg(t) = s_gg(nr);   % gross growth
         a(nr).Sng(t) = s_ng(nr);   % netgrowth
 
-        a(nr).Snl(t) = s_nl(nr);   % net loss
+   %     a(nr).Snl(t) = s_nl(nr);   % net loss
         a(nr).Sml(t) = s_met(nr); % metabolism losses
         a(nr).Spl(t) = s_pl(nr) ;  % predation losses
-        a(nr).Sel(t) = s_eg(nr) ;  % egestion losses
+        a(nr).Sel(t) = s_eg(nr) ;  % egestion 
         a(nr).Sal(t) = s_aen(nr) ;  % assimilation + nut mismatch losses
 
         a(nr).Sp(t)  = s_po(nr); % agent position
