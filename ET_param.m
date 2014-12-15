@@ -1,75 +1,90 @@
 %% parameters
+%% ---UNITS-------------------------------
+% meters
+% days
+% gram carbon
+% 
+%% ---------------------------------------
 
-%% domain
+%% Domain
 
-iparam.tEnd = 1000;   % total time 
-iparam.dt   = 1;     % time discretisation  
+iparam.tEnd = 24*365;   % total time 
+iparam.dt   = 1/24;     % time discretisation (days) -> 1/24 = hours
 
 iparam.Depth  = 50 ; % depth (gridpoints) size of spatial dimension
-iparam.dz   = 1 ; % spatial resolution in meters for grid
+iparam.dz   = 1 ; % spatial resolution (m)
 
-iparam.nAgents= 1000 ;  % number of agents
+iparam.nAgents= 500 ;  % number of agents
 
 %% physics
 
-% iparam.I0 = 100 ; % surface light [watt m^-2]
-iparam.I0=10^5*12; % mikromols/m^2/s
-iparam.Kp=0.2; % backround turbidity (per meters)
-iparam.Kw=0.015; % attenuation coefficient of Phytoplankton (K)  (square meters per mmol of nitrogen)
-iparam.d = 10  ; % diffusion for now
+iparam.d = 0.1  ; % Turbulent diffusivity (m^2/day)
 
-% inital resources (starting with Redfield)
-iparam.iniP0=0.016; % mmol N/m^3 
-iparam.iniN0=0.106; % mmol N/m^3   0.1
-iparam.iniDOM=0; % mmol DOM/m^3
-
-%% nutrients
-
-% nutrient size
-
-%NH4+ = 18.03851 g mol−1  / NO3- = 62.0049 g mol-1 /  NO2- = 46.01 g mol−1
-iparam.Is = 10e-10;
-%PO4 = 94.9714 g mol−1
-%iparam.IPs = 10e-10;
-% same size since bound in organic molecules
-% would be nice to have organic particles as well / so DOM and POM 
-% random size when being egested could be a way forward
-iparam.Os = 10e-5;
-
-% remineralisatoin rate Detritus -> nutrients
+% remineralization rate (1/day) (Beckmann & Hense, 2007)
 iparam.rmin = 0.1;
 
-% order of structures (active,passive,metabolic, storage)
-iparam.INStr(1,:)=[0, 1, 0, 0];
-iparam.IPStr(1,:)=[0, 1, 0, 0];
-iparam.ONStr(1,:)=[0, 1, 0, 0];
-iparam.OPStr(1,:)=[0, 1, 0, 0];
+% light
+% 300 W m–2 (about 1380 µmol photons m–2 s–1)
+iparam.I0 = 1380*(60*60*24)/1000; % surface light (mmol photons/m^2/day)
+iparam.I0=10^5*12; % mikromols/m^2/s
+iparam.Kp=0.2; %  Light attenuation coefficient by sea water (1/m)
+iparam.Kw=0.015; % attenuation coefficient of Phytoplankton   (square meters per mmol of nitrogen)
 
 %% biology
 
 % time step should be set at scale with max base speed so speed at adult
-% size, ti hsoudl be the fastest guy in town
+% size, this should be the fastest guy in town
 
 % intial values
-iparam.svar  = 15   ; % variability in agents intial size + prey optimal size 
-% gives (15) a range of ~1 pg - 1 kg! units are later set to g in ET_intial
-iparam.sfle  = 5; %iparam.svar*0.5; %/10 ; % max. felxibility of intial prey size felxibility / 1 - assimilation efficency
-iparam.scon  = 0.7 ; %conversion efficency for structures  /  assimilation efficency
+iparam.svar  = 8   ; % variability in agents intial size + prey optimal size 
+% gives (11) a range of ~1 pg - 1 g! units are later set to g in ET_intial
+%        15 -> 1 kg
+%        8  -> 1 mg  (~adult hyperborus)
+% defines lower limit for size range 
+iparam.lowlim = 10^12; 
+%10^12=10e-12 -> 1 pg
+%10^11=10e-11 -> 10 pg
+
+iparam.sfle  = 5; % prey size felxibility (scaling factor) / 1 - assimilation efficency
 iparam.ins   = 0.5  ; % intial size as in trait size
 
 % scaled (on size, speed, flex or anything else that seems to make sense)
 iparam.sm    = 0.01;     % base standard metabolism   
-iparam.am    = 0.01 ;    % base active metabolism 
-iparam.mm    = 0.005;    % base movment cost  
+iparam.am    = 0.00 ;    % base active metabolism 
+iparam.mm    = 0.005;    % base movement cost  
 
-%iparam.sm    = 0.01  ;     % base standard metabolism   
-%iparam.am    = 0.05 ;      % base active metabolism 
-%iparam.mm    = 0.01;     % base movment cost 
-
-iparam.mut = 0.01 ;     % mutation properbility
+iparam.mut = 0.01 ;     % mutation properbility (day)
 
 % Some parameters for movement:
-iparam.r = 0.33 ; % standard deviation
+iparam.mobs = 100; % scaling factor for general mobility
+iparam.r = 0.33 ; % standard deviation (randomisation of movement)
 
 % die at proportion of size of maturity
 iparam.death = 0.1;
+
+% size of uptake site [m] (Fiksen et al 2013 -> Berg & Purcell 1977)
+iparam.s =  1*10^-9;
+
+% uptake sites cover intercept (extracted from Fiksen et al 2013)
+iparam.pNi = 2.41e-4 ;
+iparam.pPi = 3.32e-4 ;
+
+% handling time intercept (extracted from Fiksen et al 2013)
+iparam.hNi = 1.07e-4; % [s]
+iparam.hPi = 6.5e-4; % [s]
+
+% scaling factor for evaculation rate of stomach
+% 0-1 / if 1 than s_si.*[a.TstrM]
+iparam.evac = 0.3;
+
+% scaling factor for learning
+% (higher value = slower learning / 1 = instantanius adaptation to optimal)  
+iparam.lscale = 3;
+
+%% intial values
+
+% inital resources (starting with Redfield)
+iparam.iniIP=0.016; % mmol N/m^3 
+iparam.iniIN=0.106; % mmol N/m^3  
+iparam.iniDN=0.1; % mmol DOM/m^3
+iparam.iniDP=0.1; % mmol DOM/m^3

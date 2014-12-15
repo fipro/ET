@@ -1,11 +1,19 @@
-% proportion of this agent of total uptake structure
+        %% phoyosynthesis
+    
+        %% INN turns zero, this is  propblem since it stops uptake.
+        %% INN is controlled by prop for that matter
+        %% BUt INN is staying at zoer because now 2D and  only oneD attent to read it
+        
+        
+        
+        % proportion of this agent of total uptake structure
 prop(nr) = ((s_si(nr)*a(nr).Ntot)*a(nr).TtrD)/(Pauto(ceil(s_po(nr)*iparam.dz)));
 
 % proportion of nutrients available to agent considering competition
-INN(nr) = IN(ceil(s_po(nr)*iparam.dz))*prop(nr);
-IPP(nr) = IP(ceil(s_po(nr)*iparam.dz))*prop(nr);
+INN(nr) = IN(t-1,ceil(s_po(nr)*iparam.dz))*prop(nr);
+IPP(nr) = IP(t-1,ceil(s_po(nr)*iparam.dz))*prop(nr);
            
-% find limiting resource
+% light limitation
 s_fI(nr) = a(nr).umax*s_si(nr) * (I(t,(ceil(s_po(nr)*iparam.dz)))./(a(nr).kI+I(t,(ceil(s_po(nr)*iparam.dz)))));       % Light-dependent phytoplankton growth
 
 %% Aksnes and Cao 2011 (original)
@@ -21,15 +29,15 @@ s_pN(nr)  = (iparam.pNi*((s_si(nr).*10^12/0.216)^(1/0.939)).^-0.18);
 s_pP(nr)  = (iparam.pPi*((s_si(nr).*10^12/0.216)^(1/0.939)).^-0.26); 
 
 % nr of uptake sites
-s_nN(nr) = 4*s_pN(nr).*((s_si(nr).*10^12/0.216)^(1/0.939)).^2*iparam.s^-2;
-s_nP(nr) = 4*s_pP(nr).*((s_si(nr).*10^12/0.216)^(1/0.939)).^2*iparam.s^-2;
-    
-% affinity Fiksen et al 2013 Eq.7
-s_affN(nr) = (4*pi*diff*s_rad(nr)) * (( s_nN(nr)*iparam.s) / ...
-             ((s_nN(nr)*iparam.s) + (pi*s_rad(nr)*(1-s_pN(nr)) )));  
-s_affP(nr) = (4*pi*diff*s_rad(nr)) * ((s_nP(nr)*iparam.s) / ...
-             ((s_nP(nr)*iparam.s) + (pi*s_rad(nr)*(1-s_pP(nr)) )));  
+s_nN(nr) = 4.*s_pN(nr).*((s_rad(nr)).^2).*(iparam.s^-2);
+s_nP(nr) = 4.*s_pP(nr).*((s_rad(nr)).^2).*(iparam.s^-2);
 
+% affinity Fiksen et al 2013 Eq.7
+s_affN(nr) = (4*pi*diff*s_rad(nr)*10^6) * (( s_nN(nr)*iparam.s*10^6) / ...
+((s_nN(nr)*iparam.s*10^6) + (pi*s_rad(nr)*10^6*(1-s_pN(nr))) ));  
+s_affP(nr) = (4*pi*diff*s_rad(nr)*10^6) * ((s_nP(nr)*iparam.s*10^6) / ...
+((s_nP(nr)*iparam.s*10^6) + (pi*s_rad(nr)*10^6*(1-s_pP(nr))) ));  
+    
 % Aksnes and Cao 2011         
 bN = (1/ s_affN(nr)*INN(nr)) + (s_hN(nr)/s_nN(nr));  
 bP = (1/ s_affP(nr)*IPP(nr)) + (s_hP(nr)/s_nP(nr));  
@@ -48,12 +56,13 @@ s_fP(IP(t-1,ceil(s_po(nr)*iparam.dz))<=0) = 0; % Fix potentially negative growth
 % get uptake
 % this will need to be scaled to the units of uptake
 % carbon by light
-s_phy(nr) = min([s_fI(nr),s_fN(nr)/a(nr).Ntot,s_fP(nr)/a(nr).Ptot]);  % Effective growth rate
+s_agg(nr) = min([s_fI(nr),s_fN(nr)/a(nr).Ntot,s_fP(nr)/a(nr).Ptot]);  % Effective growth rate
 
-s_agg(nr) = s_phy(nr)*a(nr).ae;
+%s_agg = s_phy;
 
 % note: at the second step value turn to Nan and than corrected
 % to 0. after that every second value turns negative ->
 % correted to zero. in the next step a value apears. most
 % liekly from remin and since no growth on zero for timestep,
 % the remin value materializes.
+      

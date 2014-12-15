@@ -1,14 +1,12 @@
 clear all; close all; clc;
 tic;
 
-% test
-
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 %++++++++++++++++++++++++++  E.T. Model  ++++++++++++++++++++++++++++++++++
 %+++++++++++++++++++  (Evolutionary Trait Model)  +++++++++++++++++++++++++
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-% Version  17/11/2014
+% Version  28/11/2014
 
 global iparam a 
 
@@ -18,63 +16,290 @@ ET_param
 %% initial
 ET_initial
 
+%ET_intial_plot
+
 %% Initial for realtime plotting
 nplotAgents = 4 ;
 selectedAgents = round(100*rand(1,nplotAgents)) ;
 
-%% nutrient fields
-
-% matrix
-ma(1:nGrid) =   -   diff; 
-mb(1:nGrid) = 1 + 2*diff;
-mc(1:nGrid) =   -   diff;
-
-% Boundary conditions:
-mb(1)   = 1 + diff; % surface Closed
-%mb(end) = 1 + diff; % bottom closed
-
-% assemble matrix
-A(2:nGrid+1:nGrid*nGrid)       = ma(2:end);
-A(1:nGrid+1:nGrid*nGrid)       = mb;
-A(nGrid+1:nGrid+1:nGrid*nGrid) = mc(1:end-1);
 
 %% time loop
 
 for t= 2:nTime
 
     disp(['time: ',num2str(t),'   Agents alive: ' ,num2str(nAgents)]);            % print so see progress
-
-    %% nutrient fields - reaction
+   
     
-    % change matrices - set to zero
-    dN  = zeros(1,nGrid);
-    dP  = zeros(1,nGrid);
-    dDN = zeros(1,nGrid);
-    dDP = zeros(1,nGrid);
+    %% light field
+    
+    % self-shading
+    % this account in units of nitrogen, since all agents produce a shadow
+    for nr= 1:nAgents
+        Pn(t-1,ceil(s_po(nr)*iparam.dz)) = Pn(t-1,ceil(s_po(nr)*iparam.dz))...
+                                       + (s_si(nr)*a(nr).Ntot);  
+   end
+  
+    I(t,:) = iparam.I0 * exp( -cumsum(iparam.Kw*Pn(t-1,:))*iparam.dz ...  % Self-shading of all agents
+          - iparam.Kp*z);                                                % Extinction by water 
 
+      % collect all uptake structures per box (needed for nutrient uptake
+      % competion)
+      Pauto = zeros(1,nGrid);
+   for nr= 1:nAgents
+        Pauto(ceil(s_po(nr)*iparam.dz)) = Pauto(ceil(s_po(nr)*iparam.dz))...
+                                       + (s_si(nr)*a(nr).Ntot*a(nr).TtrD);  
+   end
+      
+
+%% update size
+s_si = max(0, (s_si + s_ng)) ;  
+%x = num2cell(max(0, (s_si(nr) + s_ng))) ;  
+
+% radius of agent (for autotrophs assuming spheric cell)
+%-----------------------------------------
+% g -> vol (menden-deuer & lassard 2000) / vol -> radius (spheric) / µm -> m
+    s_rad = (((3.*((s_si./0.216).^(1/0.939))) ./ (4*3.141)).^(1/3) ) .*0.000001;  
+             
+%% reproduction/seeding
+    % are you willing?
+
+        if (any(s_si>[a.Tsi]) );
+            s_rep = (s_si>[a.Tsi]);
+            
+           ET_seed
+        end
+
+%% update states
+    
+    % handling time
+    % maximum evacualtion rate of stomach is related to metabolic structure
+    % note, only empty stomach can eat
+    % e.g. if MS=0.33 than 0.33 of the max uptake can be reduced
+    % the formulation below will still work if partital feeding on full
+    % stomach should will be implemented
+    % currently the max 'stomach size' is the the max uptake a.up
+   % s_us = max(0,s_us - (s_si.*[a.TstrM] - iparam.evac*s_si.*[a.TstrM]));
+      
+   % new stomach: 0-1 degree of fullness
+    s_us = max(0,s_us - iparam.evac*[a.TstrM]);
+         
+    % speed   
+    s_sp  =  [a.sp].*s_si;  % actual speed
+
+%% re-arrange array, removing dead ones  
+
+    % dead or alive
+    % you die when less than proportion of maturity (iparam.death)
+    a0          = find(s_si < [a.Tsi]*iparam.death);
+    [aval apos] = find(s_si >= [a.Tsi]*iparam.death);
+    nAgents     = length(aval);
+
+    % dead one into dead array
+    deadlen = length(a_dead) - 1;
+    for idead = 1:length(a0)
+        a_dead(deadlen + idead) = a(a0(idead));
+    end
+
+    %only alive ones stay
+    anew = a(1);
+    for ilive = 1:nAgents
+        anew(ilive) = a(apos(ilive));
+    end
+    a = anew;
+
+    % ...and now update the length of the arrays
+    ran  = zeros(nAgents,1);
+  
+    Asi  = zeros(nAgents);
+    learn = zeros(nAgents,3);
+
+    Agetm  = zeros(1,nAgents);
+    Agetmm = zeros(1,nAgents);
+    Agea   = zeros(1,nAgents);
+
+    % states
+    s_si  = s_si(apos);
+    s_rad  = s_rad(apos);
+    s_sp  = s_sp(apos);
+    s_po  = s_po(apos);
+    s_us  = s_us(apos);
+    s_me  = s_me(apos,:);
+    s_ng  = s_ng(apos);
+    s_eg  = s_eg(apos);
+    s_gg  = s_gg(apos);
+    s_hgg = s_hgg(apos);
+    s_pl  = s_pl(apos);
+    s_met = s_met(apos);
+   
+    s_fI  = s_fI(apos);
+    s_fN  = s_fN(apos);
+    s_fP  = s_fP(apos);
+    s_agg = s_agg(apos);
+    s_aen = s_aen(apos);
+ 
+    s_affN = s_affN(apos);   % nutrient affinity N
+    s_affP = s_affP(apos);   % nutrient affinity P 
+    s_pN   = s_pN(apos);     % density uptake nutrient sites N
+    s_pP   = s_pP(apos);     % density uptake nutrient sites P
+    s_hN   = s_hN(apos);  % handling time 
+    s_hP   = s_hP(apos);  % handling time 
+    s_nN   = s_nN(apos);  % nr. of uptake sites (porters)  N
+    s_nP   = s_nP(apos);  % nr. of uptake sites (porters)  P
+
+%% autotroph growth
+
+% no autotrophic uptake -> will be overwritten if autotrophic
+      s_agg          = zeros(1,nAgents);
+    
+    for nr = find([a.TtrT] ~= 2)   % agent loop only for autotrophics   
+
+        %interpolate nutrient conc. for actual agent position
+        INint(nr)=interp1(z,IN(t-1,1:end),(s_po(nr)*iparam.dz));
+        IPint(nr)=interp1(z,IP(t-1,1:end),(s_po(nr)*iparam.dz));
+
+        %interpolate light for actual agent position
+        Iint(nr)=interp1(z,I(t,1:end),(s_po(nr)*iparam.dz));
+
+        % autotrophic uptake
+        ET_atrophic
+        
+    end
+    
+%% heterotrophic uptake
+
+        s_hgg          = zeros(1,nAgents);
+        s_pl           = zeros(1,nAgents);
+        s_aen          = zeros(1,nAgents);
+
+       Ca=1;
+
+    % Food of the right size in range? Hungry? Only for heterotrophics
+     AA=find([a.TtrT] ~= 1);
+     
+    %% %growth
+   %function [s_si, s_us, s_hgg, s_pl, s_aen, s_po] = ET_grow(AA, nAgents, s_si, s_us, s_po)
+
+     s_up=zeros(nAgents,3);
+     Aup=zeros(1,length(AA));
+     Aval =zeros(1,length(AA));
+     Apos =zeros(1,length(AA));
+     Adet = zeros(1,nAgents);
+
+
+for nr = AA(randperm(length(AA))); % randomized feeding order
+    
+    % heterotrophic uptake
+    ET_htrophic
+       
+end
+  
+            %% learn 
+         ET_learn
+
+%% total uptake (hetero & auto)
+   
+    s_gg = s_hgg + s_agg;
+  
+%% loss terms
+
+    % metabolic losses
+    % standard metabolism / proportion of your own total size
+    s_me(:,1) = iparam.sm.*s_si*iparam.dt ;           
+
+    % mixotrohps need to maintain the two machineries  
+    if (a(nr).TtrT == 3)
+        s_me(:,1) = s_me(:,1)*2;
+    end
+    % active metabolism / part of everything that has been ingeested (not
+    % nessarily digested)
+    %s_me(Ca(1,:),2) = iparam.am*Agetm'; 
+    s_me(:,2) = iparam.am.*s_gg; 
+    % movement costs / relative speed * actual size ^2 * cost parameter
+    s_me(:,3) = iparam.mm.*s_si.*s_sp;        
+
+    % total metabolic losses
+    s_met  = sum(s_me');  % total metabolic costs
+
+%% egestion
+    %  meatbolic losses + sloppy feeding + nutrient mismatch
+    s_eg = s_met + s_aen;
+
+    % net growth
+    % not s_aen because it represents the losses that are not even assililated
+    s_ng  = s_gg -  s_pl - s_met ; 
+
+        
+%% store updated structures and variables back to agent array
+
+% this can possibly done outside a loop!!!!!!!!!!!!!!!
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1!
+
+    for nr = 1:nAgents
+
+        a(nr).time(t) = t;  % time
+
+        a(nr).s(t)   = s_si(nr);  % size
+
+        a(nr).Shgg(t) = s_hgg(nr);   % gross growth
+        a(nr).Sagg(t) = s_agg(nr);   % gross growth
+        
+        a(nr).Sgg(t) = s_gg(nr);   % gross growth
+        a(nr).Sng(t) = s_ng(nr);   % netgrowth
+
+        a(nr).Sml(t) = s_met(nr); % metabolism losses
+        a(nr).Spl(t) = s_pl(nr) ;  % predation losses
+        a(nr).Sel(t) = s_eg(nr) ;  % egestion 
+        a(nr).Sal(t) = s_aen(nr) ;  % assimilation + nut mismatch losses
+        a(nr).Sup(t)   = Aup(nr);   
+
+        a(nr).Sp(t)  = s_po(nr); % agent position
+        a(nr).Ssp(t) = s_sp(nr) ;  % actual speed
+        a(nr).Sus(t) = s_us(nr);   % uptake saturation (stomach)
+        
+        a(nr).rad(t) = s_rad(nr);  % cell radius 
+
+        a(nr).affN(t) = s_affN(nr);   % nutrient affinity
+        a(nr).affP(t) = s_affP(nr);   % nutrient affinity
+        a(nr).pN(t)   = s_pN(nr);     % density uptake nutrient sites
+        a(nr).pP(t)   = s_pP(nr);     % density uptake nutrient sites
+        a(nr).hN(t)   = s_hN(nr);  % handling time 
+        a(nr).hP(t)   = s_hP(nr);  % handling time 
+        a(nr).nN(t)   = s_nN(nr);  % nr. of uptake sites (porters) 
+        a(nr).nP(t)   = s_nP(nr);  % nr. of uptake sites (porters) 
+        
+    end
+   
+
+    
+%% mutate
+  
+    ET_mutate
+
+%% nutrient fields - reaction
+    
     % changes related to field 
-    dN  = dN  + iparam.rmin*DN(t-1,:);      % Remineralization from the detritus
-    dP  = dP  + iparam.rmin*DP(t-1,:);      % Remineralization from the detritus
-    dDN = dDN - iparam.rmin*DN(t-1,:);
-    dDP = dDP - iparam.rmin*DP(t-1,:);
+    dN  =  + iparam.rmin*DN(t-1,:);      % Remineralization from the detritus
+    dP  =  + iparam.rmin*DP(t-1,:);      % Remineralization from the detritus
+    dDN =  - iparam.rmin*DN(t-1,:);
+    dDP =  - iparam.rmin*DP(t-1,:);
 
     % changes related to agents    
     for nr = 1:nAgents
 
        dN(ceil(s_po(nr)*iparam.dz)) = dN(ceil(s_po(nr)*iparam.dz))...
-              -s_agg(nr)*t_Ntot(nr)*s_si(nr);
+              -s_agg(nr); % *t_Ntot(nr)*s_si(nr);
 
        dP(ceil(s_po(nr)*iparam.dz)) = dP(ceil(s_po(nr)*iparam.dz))...
-             -s_agg(nr)*t_Ptot(nr)*s_si(nr); 
+             -s_agg(nr) ;%;*t_Ptot(nr)*s_si(nr); 
 
        dDP(ceil(s_po(nr)*iparam.dz)) = dDP(ceil(s_po(nr)*iparam.dz))...
-             +s_eg(nr)*t_Ptot(nr)*s_si(nr);
+             +s_eg(nr)*a(nr).Ptot*s_si(nr);
 
        dDN(ceil(s_po(nr)*iparam.dz)) = dDN(ceil(s_po(nr)*iparam.dz))...
-             +s_eg(nr)*t_Ntot(nr);
+             +s_eg(nr)*a(nr).Ntot*s_si(nr);
     end 
    
-    % solve
+    % solve (implicit difussion)
     s(1,:)=(IN(t-1,:)+dN*iparam.dt); 
     IN(t,:)=A\(s)';
 
@@ -93,144 +318,17 @@ for t= 2:nTime
     DN(t,:) = max(0, DN(t,:)); 
     DP(t,:) = max(0, DP(t,:)); 
 
-    %% light field
     
-    % self-shading
-    % this account in units of nitrogen, since all agents produce a shadow
-    for nr= 1:nAgents
-        Pn(t,ceil(s_po(nr)*iparam.dz)) = Pn(t,ceil(s_po(nr)*iparam.dz))...
-                                       + (s_si(nr)*t_Ntot(nr));  
-   end
-      
-    % thing about how to estiamte chlorohpyll; to get extinction due to
-    % phytoplankton, so for now just water turbidity
-    I = iparam.I0 * exp( -cumsum(iparam.Kp*z));                         % Extinction by water
+       for nr=1:nAgents     
+  %%   move agents
 
-    % still needs to define P
-    I = iparam.I0 * exp( -cumsum(iparam.Kw*Pn(t-1,:)./12)*iparam.dz ...  % Self-shading
-          - iparam.Kp*z);                    % Extinction by water% nutrient fields
-
-    
-%% update size
- 
-    s_si = max(0, s_si + s_ng) ;  
-                   
-%% reproduction/seeding
-    
-    % are you willing?
-    s_rep = (s_si>t_si);
-
-    if (sum(s_rep(:)) ) ~= 0;
-       ET_seed
-    end
-   
-%% update states
-    
-    % handling time
-    % maximum evacualtion rate of stomach is related to metabolic structure
-    % note, only empty stomach can eat
-    % e.g. if MS=0.33 than 0.33 of the max uptake can be reduced
-    % the formulation below will still work if partital feeding on full
-    % stomach should will be implemented
-    % currently the max 'stomach size' is the the max uptake p_up
-    s_us = max(0,(s_us + s_gg) - (p_up.*s_si*t_str(:,3))') ;  
-
-    % speed   
-    s_sp  =  p_sp.*s_si;  % actual speed
-   
-%% re-arrange array, removing dead ones  
-
-    % dead or alive
-    % you die when less than proportion of maturity (iparam.death)
-    a0          = find(s_si <  t_si*iparam.death);
-    [aval apos] = find(s_si >= t_si*iparam.death);
-    nAgents     = length(aval);
-
-    % dead one into dead array
-    deadlen = length(a_dead) - 1;
-    for idead = 1:length(a0)
-        a_dead(deadlen + idead) = a(a0(idead));
-    end
-
-    %only alive ones stay
-    anew = a(1);
-    for ilive = 1:nAgents
-        anew(ilive) = a(apos(ilive));
-    end
-    a = anew;
-
-    % ...and now update the length of the arrays
-    ran  = zeros(nAgents,1);
-
-    Adet = zeros(nAgents);
-    Aenc = zeros(nAgents);
-    Asi  = zeros(nAgents);
-    Afit = zeros(nAgents);
-    Aus  = zeros(nAgents);
-    Adis = zeros(nAgents);
-    Afea = zeros(nAgents);
-    Afe  = zeros(nAgents);
-
-    AcomAS = zeros(nAgents);
-    AcomPS = zeros(nAgents);
-    AcomMS = zeros(nAgents);
-
-    Agetm  = zeros(1,nAgents);
-    Agetmm = zeros(1,nAgents);
-    Agea   = zeros(1,nAgents);
-
-    % traits
-    t_str   = t_str(apos,:);
-    t_si    = t_si(apos);
-    t_tagS  = t_tagS(apos,:);
-    t_tagAS = t_tagAS(apos,:);
-    t_tagPS = t_tagPS(apos,:);
-    t_tagMS = t_tagMS(apos,:);
-    t_CNPAS = t_CNPAS(apos,:);
-    t_CNPPS = t_CNPPS(apos,:);
-    t_CNPMS = t_CNPMS(apos,:);
-    t_stor  = t_stor(apos,:);
-    t_tro   = t_tro(apos,:);
-    t_Ntot  = t_Ntot(apos);
-    t_Ptot  = t_Ptot(apos);
-
-    % parameters
-    p_ae   = p_ae(apos);
-    p_up   = p_up(apos);
-    p_kI   = p_kI(apos);
-    p_kN   = p_kN(apos);
-    p_kP   = p_kP(apos);
-    p_umax = p_umax(apos);
-    p_sp   = p_sp(apos);
-
-    % states
-    s_si  = s_si(apos);
-    s_sp  = s_sp(apos);
-    s_po  = s_po(apos);
-    s_us  = s_us(apos);
-    s_me  = s_me(apos,:);
-    s_ng  = s_ng(apos);
-    s_eg  = s_eg(apos);
-    s_gg  = s_gg(apos);
-    s_hgg = s_hgg(apos);
-    s_pl  = s_pl(apos);
-   %s_nl  = s_nl(apos); 
-    s_met = s_met(apos);
-
-    s_fI  = s_fI(apos);
-    s_fN  = s_fN(apos);
-    s_fP  = s_fP(apos);
-    s_agg = s_agg(apos);
-    s_aen = s_aen(apos);
-
-%% agent loop
-    for nr = 1:nAgents        
-        
-%% move 
         % move / with d being diffusion (needs to be defined)
         ran(nr) = -1 + ( rand(1) * 2 ) ;
 
-        % new position
+        % displacement due to diffusion
+          s_po(nr) = s_po(nr) + 2*ran(nr)*sqrt(2*iparam.r^-1*diff);
+ 
+        % movement due to mobility
         s_po(nr) =  s_po(nr) + (2*ran(nr)'*sqrt(2*iparam.r^-1*s_sp(nr)))';
 
         % Sticky boundary conditions
@@ -238,149 +336,8 @@ for t= 2:nTime
         %  s_po(nr,:) = min ( iparam.nGrid, s_po(nr,:)) ;   % set surface boundary
         s_po(nr) = max ( s_po(nr), 1) ;            % set bottom boundary
         s_po(nr) = min ( iparam.Depth, s_po(nr)) ;   % set surface boundary
-
-%% autotroph growth
-
-%interpolate nutritent conc. for actual agent position
-INint(nr)=interp1(z,IN(t-1,1:end),(s_po(nr)*iparam.dz));
-IPint(nr)=interp1(z,IP(t-1,1:end),(s_po(nr)*iparam.dz));
-
-%interpolate light for actual agent position
-Iint(nr)=interp1(z,I(1:end),(s_po(nr)*iparam.dz));
-
-        if (t_tro(nr,1) ~= 2) % photosynthesis
-            ET_phyto
-        else
-            % no autotrophic uptake
-            s_agg(nr)= 0; 
-        end
-                   
-%% encounter (only for heterotroph part) ?
-
-        for nr2 = 1:nAgents
-
-            % matrix of all specific detection radius relations
-            Adet(nr, nr2) = (1 + s_si(nr)) * (1+ s_si(nr2));
-
-            % does the size fit? binary response -> size only has to fit,
-            % the goodness of fit does not affect uptake rate
-            Asi(nr,nr2) = ((max(0, (t_tagS(nr,2) - (abs(1-(s_si(nr2)/t_tagS(nr,1)))))/t_tagS(nr,2) )) > 0);
-
-            % does the composition fit
-            AcomAS(nr,nr2) = t_tagAS(nr,3) * max(0, (t_tagAS(nr,2) - (abs(1-(t_str(nr2,1)/t_tagAS(nr,1)))))/t_tagAS(nr,2) );
-            AcomPS(nr,nr2) = t_tagPS(nr,3) * max(0, (t_tagPS(nr,2) - (abs(1-(t_str(nr2,2)/t_tagPS(nr,1)))))/t_tagPS(nr,2) );
-            AcomMS(nr,nr2) = t_tagMS(nr,3) * max(0, (t_tagMS(nr,2) - (abs(1-(t_str(nr2,3)/t_tagMS(nr,1)))))/t_tagMS(nr,2) );
-
-            % can I catch you?
-            %Amov(nr,nr2)= s_sp(nr)>s_sp(nr2);
-
-        end
-
-            % uptake saturation / handling time -> only eat when the stomach is empty
-            Aus(nr,:) = (s_us(nr) == 0);  
-    end 
-     
-    %% score matrices
-
-    % find distance between agents & see if they can detect each other
-    Adis = (squareform(pdist(s_po,'euclidean'))); 
-    Aenc = (Adet>Adis); 
-
-    % who will have a real feeding encounter 
-    %     (size encounter, hunger, composition, heterotrophic ability)
-    Afit = Asi .* Aenc .*Aus .* AcomAS .* AcomPS .* AcomMS .* (1-t_tro(nr,2)); %.* Amov  
-
-    % find best fitting prey
-    [Afex Afey] = max(Afit');
-    for i = 1:nAgents        % write value (afex) to corresponding position
-        Afea(i,Afey(i)) = Afex(i);
-    end
-
-    % remove muiltiple predators
-    [Afeax Afeay] = max(Afea);
-    for i = 1:nAgents        % write value (afex) to corresponding position
-        Afe(Afeay(i),i) = Afeax(i);
-    end
-
-    % set diagonal to zero (don't eat yourself)
-    Afe(logical(eye(size(Afe)))) = 0;
-
-%% feeding ?   
-
-    if (sum(Afe(:)) ~= 0) ;  
-        ET_grow;
-    else
-        s_pl(:) = 0;
-        s_hgg(:) = 0;
-        Agetm = 0;
-        Ca=1;
-    end
-
-%% total uptake (hetero & auto)
-   
-    s_gg = s_hgg + s_agg;
-  
-%% loss terms
-
-    % metabolic losses
-    % standard metabolism / proportion of your own total size
-    s_me(:,1) = iparam.sm.*s_si(:) ;           
-
-    % mixotrohps need to maintain the two machineries  
-    if (t_tro(nr,1) == 3)
-        s_me(:,1) = s_me(:,1)*2;
-    end
-    % active metabolism / part of everything that has been ingeested (not
-    % nessarily digested)
-    %s_me(Ca(1,:),2) = iparam.am*Agetm'; 
-    s_me(:,2) = iparam.am.*s_gg; 
-    % movement costs / relative speed * actual size ^2 * cost parameter
-    s_me(:,3) = iparam.mm.*s_si(:).*s_sp(:);        
-
-    % total metabolic losses
-    s_met  = sum(s_me');  % total metabolic costs
-
-%% egestion
-    %  meatbolic losses + sloppy feeding + nutrient mismatch
-    s_eg = s_met + s_aen;
-
-    % overall losses
-   % s_nl = s_pl + s_met + s_aen;
-
-    % net growth
-    % not s_aen because it represents the losses that are not even assililated
-    s_ng  = s_gg -  s_pl - s_met ; 
-
-%% store updated structures and variables back to agent array
-
-    for nr = 1:nAgents
-
-        a(nr).time(t) = t;  % time
-
-        a(nr).s(t)   = s_si(nr);  % size
-
-        a(nr).Shgg(t) = s_hgg(nr);   % gross growth
-        a(nr).Sagg(t) = s_agg(nr);   % gross growth
-        
-        a(nr).Sgg(t) = s_gg(nr);   % gross growth
-        a(nr).Sng(t) = s_ng(nr);   % netgrowth
-
-   %     a(nr).Snl(t) = s_nl(nr);   % net loss
-        a(nr).Sml(t) = s_met(nr); % metabolism losses
-        a(nr).Spl(t) = s_pl(nr) ;  % predation losses
-        a(nr).Sel(t) = s_eg(nr) ;  % egestion 
-        a(nr).Sal(t) = s_aen(nr) ;  % assimilation + nut mismatch losses
-
-        a(nr).Sp(t)  = s_po(nr); % agent position
-        a(nr).Ssp(t) = s_sp(nr) ;  % actual speed
-        a(nr).Sus(t) = s_us(nr);   % uptake saturation (stomach)
-        
-   end
+       end
     
-%% mutate
-  
-    ET_mutate
-
 %% Update real life plots
     
   %  RealTimePlots ( a, 'Sng', selectedAgents, t ) ;
