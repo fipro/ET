@@ -1,6 +1,5 @@
-close all;
 
-mkdir('initial_plots');
+mkdir([num2str(t) '_initial_plots']);
 
 % size
 figure(1)
@@ -10,7 +9,7 @@ semilogy(sort([a.Tsi]));
 title('inital size ');
 semilogy(sort(s_rad),'red')
 legend ('size [g]','trait-size [g]', 'radius [m]'); 
-print(1,'-dpng','-r300',[ 'initial_plots/size']);
+print(1,'-dpng','-r300',[ num2str(t) '_initial_plots/size']);
 
 % auto- hetero- mixotroph
 figure(2)
@@ -20,7 +19,7 @@ subplot(2,1,1)
  subplot(2,1,2)
  plot(sort([a.TtrD]))
  title('degree of autotrophy');
- print(2,'-dpng','-r300',['initial_plots/trophy']);
+ print(2,'-dpng','-r300',[ num2str(t) '_initial_plots/trophy']);
  
  % active passive metabolic sturcutre
 figure(3)
@@ -30,7 +29,7 @@ figure(3)
  plot(sort([a.TstrM]))
   title('structures')
   legend('active','passive','metabolic');
-  print(3,'-dpng','-r300',[ 'initial_plots/structures']);
+  print(3,'-dpng','-r300',[ num2str(t) '_initial_plots/structures']);
   
   % mobility
   figure(4)
@@ -40,7 +39,7 @@ figure(3)
   subplot(2,1,2)
     semilogy(sort([a.sp]));
     title('speed');
-    print(4,'-dpng','-r300',[ 'initial_plots/mobility']);
+    print(4,'-dpng','-r300',[ num2str(t) '_initial_plots/mobility']);
   
   % C:N:P composition per struc
   figure(5)
@@ -62,7 +61,7 @@ figure(3)
     subplot(3,2,6)
   bar(sort([a.CPM]));
   title('metabolic P'); 
-  print(5,'-dpng','-r300',[ 'initial_plots/CNP_struc']);
+  print(5,'-dpng','-r300',[ num2str(t) '_initial_plots/CNP_struc']);
  
  % overall C:N:P composition  
  figure(6)
@@ -72,7 +71,7 @@ figure(3)
     subplot(2,1,2)
   bar(sort([a.Ptot]));
   title('total proportional P');
-  print(6,'-dpng','-r300',['initial_plots/CNP_comp']);
+  print(6,'-dpng','-r300',[ num2str(t) '_initial_plots/CNP_comp']);
   
   % TAGs
   figure(7)
@@ -96,7 +95,7 @@ figure(3)
   errorbar(sort([a.TagMSV]),sort([a.TagMSF]))
   set(gca, 'YScale', 'log');
    title('metabolic')
-   print(7,'-dpng','-r300',[ 'initial_plots/TAGs_value']);
+   print(7,'-dpng','-r300',[ num2str(t) '_initial_plots/TAGs_value']);
    
    % TAG weights
    figure(8)
@@ -109,13 +108,13 @@ figure(3)
     subplot(1,3,3)
    hist([a.TagMSW])
    title('metabolic weights') 
-   print(8,'-dpng','-r300',['initial_plots/TAGs_weights']);
+   print(8,'-dpng','-r300',[ num2str(t) '_initial_plots/TAGs_weights']);
    
    % assimilation efficeny
    figure(9)
    plot(sort([a.ae]))
    title('assim');
-   print(9,'-dpng','-r300',[ 'initial_plots/assim_eff']);
+   print(9,'-dpng','-r300',[ num2str(t) '_initial_plots/assim_eff']);
   
    % stomach
    figure(10)
@@ -126,7 +125,7 @@ figure(3)
    subplot(2,1,2)
    plot(sort([a.sts]))
    title('stomach size');
-   print(10,'-dpng','-r300',[ 'initial_plots/stomach']);
+   print(10,'-dpng','-r300',[ num2str(t) '_initial_plots/stomach']);
    
    % position in water column
    figure(11)
@@ -135,7 +134,7 @@ figure(3)
     set(gca,'Ydir','reverse');
     ylabel('Depth [m]');
     title('vertical distribution');
-    print(11,'-dpng','-r300',[ 'initial_plots/position']);
+    print(11,'-dpng','-r300',[ num2str(t) '_initial_plots/position']);
     
       % uptake sites (nutrients)
     figure(12)
@@ -175,6 +174,6 @@ figure(3)
      legend('N','P');
          xlabel('radius [m]');
      title('nutirent affinity');
-        print(12,'-dpng','-r300',['initial_plots/autotroph']);
+        print(12,'-dpng','-r300',[ num2str(t) '_initial_plots/autotroph']);
      
      close all;

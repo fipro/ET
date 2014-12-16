@@ -1,13 +1,13 @@
         
         %% heterotrophic
 
-        BB1=(s_up(:,1)./Aup);
-        BB2=(s_up(:,2)./Aup);
-        BB3=(s_up(:,3)./Aup);
-        
-        BB1(isnan(BB1))=0;
-        BB2(isnan(BB2))=0;
-        BB3(isnan(BB3))=0;
+BB1=(s_up(:,1)./Aup);
+BB2=(s_up(:,2)./Aup);
+BB3=(s_up(:,3)./Aup);
+
+BB1(isnan(BB1))=0;
+BB2(isnan(BB2))=0;
+BB3(isnan(BB3))=0;
         
 % new value ; not scaled
 dAS = [a.TagASW]' + (BB1 - [a.TagASW]')/iparam.lscale;

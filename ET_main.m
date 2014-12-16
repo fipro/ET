@@ -6,7 +6,7 @@ tic;
 %+++++++++++++++++++  (Evolutionary Trait Model)  +++++++++++++++++++++++++
 %++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-% Version  28/11/2014
+% Version  15/12/2014
 
 global iparam a 
 
@@ -35,7 +35,7 @@ for t= 2:nTime
     % self-shading
     % this account in units of nitrogen, since all agents produce a shadow
     for nr= 1:nAgents
-        Pn(t-1,ceil(s_po(nr)*iparam.dz)) = Pn(t-1,ceil(s_po(nr)*iparam.dz))...
+        Pn(t,ceil(s_po(nr)*iparam.dz)) = Pn(t-1,ceil(s_po(nr)*iparam.dz))...
                                        + (s_si(nr)*a(nr).Ntot);  
    end
   
@@ -47,17 +47,17 @@ for t= 2:nTime
       Pauto = zeros(1,nGrid);
    for nr= 1:nAgents
         Pauto(ceil(s_po(nr)*iparam.dz)) = Pauto(ceil(s_po(nr)*iparam.dz))...
-                                       + (s_si(nr)*a(nr).Ntot*a(nr).TtrD);  
+                                       + (s_si(nr)*a(nr).Ntot*a(nr).TtrD); 
    end
       
 
 %% update size
-s_si = max(0, (s_si + s_ng)) ;  
-%x = num2cell(max(0, (s_si(nr) + s_ng))) ;  
+    s_si = max(0, (s_si + s_ng)) ;  
+    %x = num2cell(max(0, (s_si(nr) + s_ng))) ;  
 
-% radius of agent (for autotrophs assuming spheric cell)
-%-----------------------------------------
-% g -> vol (menden-deuer & lassard 2000) / vol -> radius (spheric) / µm -> m
+    % radius of agent (for autotrophs assuming spheric cell)
+    %-----------------------------------------
+    % g -> vol (menden-deuer & lassard 2000) / vol -> radius (spheric) / µm -> m
     s_rad = (((3.*((s_si./0.216).^(1/0.939))) ./ (4*3.141)).^(1/3) ) .*0.000001;  
              
 %% reproduction/seeding
@@ -70,21 +70,12 @@ s_si = max(0, (s_si + s_ng)) ;
         end
 
 %% update states
-    
-    % handling time
-    % maximum evacualtion rate of stomach is related to metabolic structure
-    % note, only empty stomach can eat
-    % e.g. if MS=0.33 than 0.33 of the max uptake can be reduced
-    % the formulation below will still work if partital feeding on full
-    % stomach should will be implemented
-    % currently the max 'stomach size' is the the max uptake a.up
-   % s_us = max(0,s_us - (s_si.*[a.TstrM] - iparam.evac*s_si.*[a.TstrM]));
-      
-   % new stomach: 0-1 degree of fullness
-    s_us = max(0,s_us - iparam.evac*[a.TstrM]);
+
+   % stomach evacuation: 0-1 degree of fullness
+    s_us = max(0,s_us - iparam.evac*[a.TstrM]*iparam.dt);
          
     % speed   
-    s_sp  =  [a.sp].*s_si;  % actual speed
+    s_sp  =  [a.sp].*s_si*iparam.dt;  % actual speed
 
 %% re-arrange array, removing dead ones  
 
@@ -195,8 +186,8 @@ end
   
             %% learn 
          ET_learn
-
-%% total uptake (hetero & auto)
+  
+    %% total uptake (hetero & auto)
    
     s_gg = s_hgg + s_agg;
   

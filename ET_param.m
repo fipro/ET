@@ -18,10 +18,10 @@ iparam.nAgents= 500 ;  % number of agents
 
 %% physics
 
-iparam.d = 0.1  ; % Turbulent diffusivity (m^2/day)
+iparam.d = 1000  ; % Turbulent diffusivity (m^2/day)
 
 % remineralization rate (1/day) (Beckmann & Hense, 2007)
-iparam.rmin = 0.1;
+iparam.rmin = 100;  % wasn't that 0.1?
 
 % light
 % 300 W m–2 (about 1380 µmol photons m–2 s–1)
